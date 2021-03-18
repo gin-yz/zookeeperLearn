@@ -1,5 +1,6 @@
 package com.cjs.zookeeperLearn.example;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
 import java.util.stream.IntStream;
 
@@ -23,6 +24,7 @@ public class TicketSeller {
         // 获取锁
         lock.acquireLock();
         sell();
+        TimeUnit.SECONDS.sleep(1);
         //释放锁
         lock.releaseLock();
     }
@@ -32,7 +34,7 @@ public class TicketSeller {
 //            ticketSeller.sellTicketWithLock();
 //        }
 
-        IntStream.range(0,20).mapToObj(new IntFunction<Thread>() {
+        IntStream.range(0,500).mapToObj(new IntFunction<Thread>() {
             @Override
             public Thread apply(int value) {
                 return new Thread(()->{

@@ -7,10 +7,13 @@ package com.cjs.zookeeperLearn.example;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.IntFunction;
+import java.util.stream.IntStream;
+
 
 public class MyLock {
     //  zk的连接串
@@ -104,7 +107,7 @@ public class MyLock {
     }
 
 //    //尝试获取锁
-//    private void attemptLock2() throws Exception {
+//    private void attemptLock() throws Exception {
 //        // 获取Locks节点下的所有子节点
 //        List<String> list = zooKeeper.getChildren(LOCK_ROOT_PATH, false);
 //        // 对子节点进行排序
@@ -138,13 +141,31 @@ public class MyLock {
         System.out.println("锁已经释放:" + this.lockPath);
     }
 
-    public static void main(String[] args) {
-        try {
-            MyLock myLock = new MyLock();
-            myLock.createLock();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+    public static void main(String[] args) throws Exception {
+//            MyLock myLock = new MyLock();
+//            myLock.acquireLock();
+//            myLock.releaseLock();
+
+
+//有缺陷，不能大量的并发,改成２００就ｇｇ了
+        IntStream.range(0,20).mapToObj(new IntFunction<Thread>() {
+            @Override
+            public Thread apply(int value) {
+                return new Thread(){
+                    @Override
+                    public void run() {
+                        try {
+                            MyLock myLock = new MyLock();
+                            myLock.acquireLock();
+                            TimeUnit.SECONDS.sleep(2);
+                            myLock.releaseLock();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                };
+            }
+        }).forEach(Thread::start);
 
     }
 }

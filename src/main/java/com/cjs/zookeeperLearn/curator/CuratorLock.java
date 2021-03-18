@@ -13,12 +13,14 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class CuratorLock {
 
-    String IP = "hadoop1:2181,hadoop2:2181,hadoop2:2181";
+    String IP = "hadoop1:2181,hadoop2:2181,hadoop3:2181";
     CuratorFramework client;
     CuratorFramework client2;
 
@@ -55,16 +57,30 @@ public class CuratorLock {
         // arg1:连接对象
         // arg2:节点路径
         InterProcessLock interProcessLock = new InterProcessMutex(client, "/lock1");
-        System.out.println("等待获取锁对象!");
-        // 获取锁
-        interProcessLock.acquire();
-        for (int i = 1; i <= 10; i++) {
-            Thread.sleep(3000);
-            System.out.println(i);
-        }
-        // 释放锁
-        interProcessLock.release();
-        System.out.println("等待释放锁!");
+
+        Stream<Thread> threadStream = IntStream.range(0, 100).mapToObj(new IntFunction<Thread>() {
+            @Override
+            public Thread apply(int value) {
+
+                return new Thread(() -> {
+
+                    // 获取锁
+                    try {
+                        System.out.println("等待获取锁对象!");
+                        interProcessLock.acquire(10, TimeUnit.SECONDS);
+                        TimeUnit.SECONDS.sleep(2);
+                        interProcessLock.release();
+                        System.out.println("等待释放锁!");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                });
+            }
+        });
+        threadStream.forEach(Thread::start);
+
+
     }
 
     @Test
@@ -226,26 +242,26 @@ public class CuratorLock {
 
     @Test
     public void semaphoreDemo() throws InterruptedException {
-        InterProcessSemaphoreV2 semaphore = new InterProcessSemaphoreV2(client,"/lock1",5);
+        InterProcessSemaphoreV2 semaphore = new InterProcessSemaphoreV2(client, "/lock1", 5);
 
         CountDownLatch countDownLatch = new CountDownLatch(30);
 
-        IntStream.range(0,30).mapToObj(new IntFunction<Thread>() {
+        IntStream.range(0, 30).mapToObj(new IntFunction<Thread>() {
             @Override
             public Thread apply(int value) {
-                return new Thread(()->{
+                return new Thread(() -> {
                     try {
                         Lease lease = semaphore.acquire();
-                        System.out.println("acquire the lock,no:"+value);
+                        System.out.println("acquire the lock,no:" + value);
                         TimeUnit.SECONDS.sleep(3);
-                        System.out.println("realse the lock,no:"+value);
+                        System.out.println("realse the lock,no:" + value);
                         semaphore.returnLease(lease);
                     } catch (Exception e) {
                         e.printStackTrace();
-                    }finally {
+                    } finally {
                         countDownLatch.countDown();
                     }
-                },String.valueOf(value));
+                }, String.valueOf(value));
             }
         }).forEach(Thread::start);
 

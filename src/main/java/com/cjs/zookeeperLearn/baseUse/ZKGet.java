@@ -45,7 +45,7 @@ public class ZKGet {
         // arg1:节点的路径
         // arg3:读取节点属性的对象
         Stat stat=new Stat();
-        byte [] bys=zooKeeper.getData("/create/node11",false,stat);
+        byte [] bys=zooKeeper.getData("/create/node2",false,stat);
         // 打印数据
         System.out.println(new String(bys));
         // 版本信息
